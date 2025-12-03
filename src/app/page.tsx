@@ -9,35 +9,41 @@ import { IoDocumentTextOutline } from "react-icons/io5";
 import { Textarea } from "@/components/ui/textarea";
 import { CiImageOn } from "react-icons/ci";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import React, { useState } from "react";
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [result, setResult] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const [summary, setSummary] = useState("");
-  const handleGenerate = async () => {
-    if (!file) {
-      setSummary("Please upload an image first.");
-      return;
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const UploadedFile = event.target.files?.[0];
+    if (!UploadedFile) return;
+    setFile(UploadedFile);
+    setPreview(URL.createObjectURL(UploadedFile));
+  };
+
+  const handledetect = async () => {
+    if (!file) return;
+    setLoading(true);
+    setResult([]);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/api/detect/route.ts", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      setResult(data.object || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-
-    const formData = new FormData();
-    formData.append("image", file);
-
-    const res = await fetch("/api/object-detection/route.ts", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-      setSummary("Error: " + data.error);
-      return;
-    }
-
-    const ingredients = data.map((obj) => obj.label).join(", ");
-    setSummary("Detected ingredients: " + ingredients);
   };
 
   return (
@@ -103,7 +109,7 @@ export default function Home() {
                 </div>
                 <div className="w-full h-10 flex justify-end items-end mt-5">
                   <Button
-                    onClick={handleGenerate}
+                    onClick={handledetect}
                     className=" rounded-xl cursor-pointer text-white"
                   >
                     Generate
@@ -116,7 +122,9 @@ export default function Home() {
                   <p className="font-semibold text-xl">Here is the summary</p>
                 </div>
                 <Textarea
-                  value={summary}
+                  value={(result || [])
+                    .map((cur: { label: string }) => cur.label)
+                    .join(",")}
                   placeholder="First, enter your image to recognize ingredients."
                   readOnly
                   className="text-[#71717A] text-sm border"
