@@ -14,14 +14,17 @@ export const POST = async (request: NextRequest) => {
   try {
     const formData = await request.formData();
     const image = formData.get("image") as File;
+
     if (!image) {
       return NextResponse.json({ error: "No image" }, { status: 400 });
     }
+    console.log("hii1");
 
     const results = (await inference.objectDetection({
       model: "facebook/detr-resnet-50",
       data: image,
     })) as DetectionResult[];
+    console.log("hii2");
 
     const objects = results
       .filter((obj) => obj.score > 0.5)

@@ -10,20 +10,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { CiImageOn } from "react-icons/ci";
 import { Button } from "@/components/ui/button";
 import React, { useState } from "react";
+import { Link } from "lucide-react";
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const UploadedFile = event.target.files?.[0];
-    if (!UploadedFile) return;
-    setFile(UploadedFile);
-    setPreview(URL.createObjectURL(UploadedFile));
-  };
-
   const handledetect = async () => {
+    console.log("hi1");
     if (!file) return;
     setLoading(true);
     setResult([]);
@@ -32,13 +28,44 @@ export default function Home() {
       const formData = new FormData();
       formData.append("image", file);
 
-      const response = await fetch("/api/detect/route.ts", {
+      const response = await fetch("/api/object-detection", {
         method: "POST",
         body: formData,
       });
 
       const data = await response.json();
-      setResult(data.object || []);
+      console.log(data);
+
+      setResult(data.objects);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [prompt, setPrompt] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    setLoading(true);
+    setImageUrl(null);
+
+    try {
+      const data = await (
+        await fetch("/api/text-to-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        })
+      ).json();
+
+      if (data.error) {
+        console.error(data.error);
+      } else if (data.image) {
+        setImageUrl(data.image);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -51,6 +78,7 @@ export default function Home() {
       <div className="w-full h-15 flex items-center border-b-2 border-[#E4E4E7]">
         <p className="font-black text-semibold ml-10">AI tools</p>
       </div>
+
       <div className="w-full flex justify-center">
         <Tabs defaultValue="analysis" className="w-[400px] mt-10">
           <TabsList>
@@ -72,6 +100,7 @@ export default function Home() {
                   onClick={() => {
                     setPreview(null);
                     setFile(null);
+                    setResult([]);
                   }}
                   className="w-10 h-10 border border-[#E4E4E7] rounded-xl cursor-pointer flex items-center justify-center"
                 >
@@ -112,7 +141,7 @@ export default function Home() {
                     onClick={handledetect}
                     className=" rounded-xl cursor-pointer text-white"
                   >
-                    Generate
+                    {loading ? "Loading..." : "Generate"}
                   </Button>
                 </div>
               </div>
@@ -122,6 +151,7 @@ export default function Home() {
                   <p className="font-semibold text-xl">Here is the summary</p>
                 </div>
                 <Textarea
+                  // value={result}
                   value={(result || [])
                     .map((cur: { label: string }) => cur.label)
                     .join(",")}
@@ -129,6 +159,11 @@ export default function Home() {
                   readOnly
                   className="text-[#71717A] text-sm border"
                 />
+                {/* <div>
+                  {result.map((item, index) => {
+                    return <div key={index}>{item?.label}</div>;
+                  })}
+                </div> */}
               </div>
             </div>
           </TabsContent>
@@ -154,9 +189,9 @@ export default function Home() {
               <div className="w-ful h-30">
                 <Textarea />
                 <div className="w-full h-10 flex justify-end items-end mt-5">
-                  <button className="w-26 h-10 border bg-amber-950 rounded-xl cursor-pointer">
-                    Generate
-                  </button>
+                  <Button className=" rounded-xl cursor-pointer text-white">
+                    {loading ? "Loading..." : "Generate"}
+                  </Button>
                 </div>
               </div>
               <div className="w-full h-30">
@@ -180,7 +215,13 @@ export default function Home() {
 
                   <p className="font-semibold font-xl">Food image creator</p>
                 </div>
-                <button className="w-10 h-10 border border-[#E4E4E7] rounded-xl cursor-pointer flex items-center justify-center">
+                <button
+                  onClick={() => {
+                    setPreview(null);
+                    setFile(null);
+                  }}
+                  className="w-10 h-10 border border-[#E4E4E7] rounded-xl cursor-pointer flex items-center justify-center"
+                >
                   <TfiBackLeft />
                 </button>
               </div>
@@ -190,9 +231,20 @@ export default function Home() {
                 </p>
               </div>
               <div className="w-ful h-30">
-                <Textarea />
+                <Textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Жишээ: Astronaut riding a horse"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg"
+                  onKeyPress={(e) => e.key === "Enter" && handleGenerate()}
+                />
                 <div className="w-full h-10 flex justify-end items-end mt-5">
-                  <Button variant="destructive">Generate</Button>
+                  <Button
+                    onClick={handleGenerate}
+                    className=" rounded-xl cursor-pointer text-white"
+                  >
+                    {loading ? "Loading..." : "Generate"}
+                  </Button>
                 </div>
               </div>
               <div className="w-full h-30">
@@ -203,6 +255,15 @@ export default function Home() {
                 <p className="text-[#71717A] text-sm">
                   First, enter your text to generate an image.
                 </p>
+                {imageUrl && (
+                  <div className="mt-6">
+                    <img
+                      src={imageUrl}
+                      alt="Generated"
+                      className="max-w-full rounded-lg shadow-lg"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>
