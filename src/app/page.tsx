@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { CiImageOn } from "react-icons/ci";
 import { Button } from "@/components/ui/button";
 import React, { useState } from "react";
-import { Link } from "lucide-react";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -18,8 +17,10 @@ export default function Home() {
   const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const [prompt, setPrompt] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
   const handledetect = async () => {
-    console.log("hi1");
     if (!file) return;
     setLoading(true);
     setResult([]);
@@ -44,22 +45,25 @@ export default function Home() {
     }
   };
 
-  const [prompt, setPrompt] = useState("");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    console.log("hi1");
+    if (!file) return;
     setLoading(true);
     setImageUrl(null);
 
     try {
-      const data = await (
-        await fetch("/api/text-to-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
-        })
-      ).json();
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/api/image-creator", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log(data);
+
+      setResult(data.objects);
 
       if (data.error) {
         console.error(data.error);
