@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { Textarea } from "@/components/ui/textarea";
-import { CiImageOn } from "react-icons/ci";
+import { CiAirportSign1, CiImageOn } from "react-icons/ci";
 import { Button } from "@/components/ui/button";
 import React, { useState } from "react";
+import { GoogleGenAI } from "@google/genai";
+import { FiMessageCircle } from "react-icons/fi";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -19,6 +21,10 @@ export default function Home() {
 
   const [prompt, setPrompt] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  const ai = new GoogleGenAI({
+    apiKey: "AIzaSyBSpoZInMQz5az3TRsErqBBLYF2sOmg3b4",
+  });
 
   const handledetect = async () => {
     if (!file) return;
@@ -44,26 +50,21 @@ export default function Home() {
       setLoading(false);
     }
   };
-
   const handleGenerate = async () => {
-    console.log("hi1");
-    if (!file) return;
+    if (!prompt.trim()) return;
+
     setLoading(true);
     setImageUrl(null);
 
     try {
-      const formData = new FormData();
-      formData.append("image", file);
-
       const response = await fetch("/api/image-creator", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
       });
 
       const data = await response.json();
       console.log(data);
-
-      setResult(data.objects);
 
       if (data.error) {
         console.error(data.error);
@@ -77,8 +78,52 @@ export default function Home() {
     }
   };
 
+  const [text, setText] = useState("");
+  const [ingredients, setIngredients] = useState<string[]>([]);
+
+  async function handleRecognition() {
+    if (!text.trim()) return;
+    setLoading(true);
+    try {
+      const prompt = `
+  Extract all ingredients from the following text.
+  Return ONLY a JSON array, nothing else.
+  Text:
+  "${text}"
+      `;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      let extracted: string[] = [];
+
+      // Use optional chaining and a fallback empty string
+      const responseText = response.text ?? "";
+
+      try {
+        const match = responseText.match(/\[.*\]/s);
+        if (match) {
+          extracted = JSON.parse(match[0]);
+        } else if (responseText) {
+          extracted = [responseText]; // fallback
+        }
+      } catch (err) {
+        console.error("Failed to parse JSON:", responseText);
+        if (responseText) extracted = [responseText];
+      }
+
+      setIngredients(extracted);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="w-full h-400 ">
+    <div className="w-full max-h-screen ">
       <div className="w-full h-15 flex items-center border-b-2 border-[#E4E4E7]">
         <p className="font-black text-semibold ml-10">AI tools</p>
       </div>
@@ -93,8 +138,8 @@ export default function Home() {
             <TabsTrigger value="creator">Image creator</TabsTrigger>
           </TabsList>
           <TabsContent value="analysis">
-            <div className="w-full h-80 ">
-              <div className="flex justify-between h-20">
+            <div className="w-full h-auto ">
+              <div className="flex justify-between h-20 items-center">
                 <div className="flex items-center h-10 gap-2">
                   <PiStarFourLight />
 
@@ -172,48 +217,71 @@ export default function Home() {
             </div>
           </TabsContent>
           <TabsContent value="recognition">
-            <div className="w-full h-80 ">
-              <div className="flex justify-between h-20">
-                <div className="flex items-center h-10 gap-2">
+            <div className="w-full h-auto">
+              <div className="flex justify-between h-20 items-center">
+                <div className="flex items-center gap-2">
                   <PiStarFourLight />
-
                   <p className="font-semibold font-xl">
-                    Ingredient recognition
+                    Ingredient Recognition
                   </p>
                 </div>
-                <button className="w-10 h-10 border border-[#E4E4E7] rounded-xl cursor-pointer flex items-center justify-center">
+                <button
+                  onClick={() => {
+                    setIngredients([]);
+                    setText("");
+                  }}
+                  className="w-10 h-10 border border-[#E4E4E7] rounded-xl cursor-pointer flex items-center justify-center"
+                >
                   <TfiBackLeft />
                 </button>
               </div>
-              <div className="h-10">
-                <p className="text-[#71717A] font-sm">
+
+              <div>
+                <p className="text-[#71717A] text-sm">
                   Describe the food, and AI will detect the ingredients.
                 </p>
               </div>
-              <div className="w-ful h-30">
-                <Textarea />
-                <div className="w-full h-10 flex justify-end items-end mt-5">
-                  <Button className=" rounded-xl cursor-pointer text-white">
+
+              <div className="space-y-2">
+                <Textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Enter recipe or ingredients description..."
+                />
+                <div className="w-full flex justify-end">
+                  <Button
+                    onClick={handleRecognition}
+                    className="rounded-xl text-white"
+                  >
                     {loading ? "Loading..." : "Generate"}
                   </Button>
                 </div>
               </div>
-              <div className="w-full h-30">
+
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <IoDocumentTextOutline className="w-4 h-5" />
+                  <IoDocumentTextOutline size={20} />
                   <p className="font-semibold text-xl">
                     Identified Ingredients
                   </p>
                 </div>
-                <p className="text-[#71717A] text-sm">
-                  First, enter your text to recognize an ingredients.
-                </p>
+                {ingredients.length > 0 ? (
+                  <ul className="list-disc list-inside">
+                    {ingredients.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[#71717A] text-sm">
+                    First, enter your text to recognize ingredients.
+                  </p>
+                )}
               </div>
             </div>
           </TabsContent>
           <TabsContent value="creator">
             <div className="w-full h-80 ">
-              <div className="flex justify-between h-20">
+              <div className="flex justify-between h-20 items-center">
                 <div className="flex items-center h-10 gap-2">
                   <PiStarFourLight />
 
@@ -221,8 +289,8 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => {
-                    setPreview(null);
-                    setFile(null);
+                    setPrompt("");
+                    setImageUrl(null);
                   }}
                   className="w-10 h-10 border border-[#E4E4E7] rounded-xl cursor-pointer flex items-center justify-center"
                 >
@@ -272,6 +340,11 @@ export default function Home() {
             </div>
           </TabsContent>
         </Tabs>
+      </div>
+      <div className="w-full h-full flex items-end justify-end relative z-50">
+        <button className="w-12 h-12 rounded-full bg-black flex items-center justify-center cursor-pointer">
+          <FiMessageCircle />
+        </button>
       </div>
     </div>
   );
