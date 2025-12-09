@@ -9,9 +9,11 @@ import { IoDocumentTextOutline } from "react-icons/io5";
 import { Textarea } from "@/components/ui/textarea";
 import { CiAirportSign1, CiImageOn } from "react-icons/ci";
 import { Button } from "@/components/ui/button";
-import React, { useState } from "react";
+import { useState } from "react";
 import { GoogleGenAI } from "@google/genai";
 import { FiMessageCircle } from "react-icons/fi";
+import { constrainedMemory } from "process";
+import { FiSend } from "react-icons/fi";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -21,6 +23,7 @@ export default function Home() {
 
   const [prompt, setPrompt] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [addchat, setAddChat] = useState(false);
 
   const ai = new GoogleGenAI({
     apiKey: "AIzaSyBSpoZInMQz5az3TRsErqBBLYF2sOmg3b4",
@@ -99,7 +102,6 @@ export default function Home() {
 
       let extracted: string[] = [];
 
-      // Use optional chaining and a fallback empty string
       const responseText = response.text ?? "";
 
       try {
@@ -342,10 +344,39 @@ export default function Home() {
         </Tabs>
       </div>
       <div className="w-full h-full flex items-end justify-end relative z-50">
-        <button className="w-12 h-12 rounded-full bg-black flex items-center justify-center cursor-pointer">
-          <FiMessageCircle />
+        <button
+          onClick={() => setAddChat(true)}
+          className="w-12 h-12 rounded-full bg-black flex items-center justify-center cursor-pointer "
+        >
+          <FiMessageCircle className="text-white" />
         </button>
       </div>
+      {addchat && (
+        <div className=" w-full h-full  flex justify-end items-end ">
+          <div className="bg-white w-95 h-120 flex justify-around flex-col items-end border rounded-xl">
+            <div className="w-full h-12 flex justify-between items-center border-b-2 p-2">
+              <div>
+                <p className="font-medium text-base">Chat assistant</p>
+              </div>
+              <button
+                onClick={() => setAddChat(null)}
+                className="w-8 h-8 rounded-xl border flex justify-center items-center cursor-pointer"
+              >
+                X
+              </button>
+            </div>
+            <div className="w-full h-14 flex justify-center items-center gap-3">
+              <input
+                placeholder="Type your message..."
+                className="w-75 h-12 border rounded-xl pl-1"
+              ></input>
+              <button className="w-11 h-11 bg-black rounded-full flex items-center justify-center cursor-pointer">
+                <FiSend className="text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
