@@ -25,8 +25,13 @@ export default function Home() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [addchat, setAddChat] = useState(false);
 
+
+  const [chatMessages, setChatMessages] = useState<{role: "user" | "assistant", content: string}[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+
   const ai = new GoogleGenAI({
-    apiKey: "AIzaSyBSpoZInMQz5az3TRsErqBBLYF2sOmg3b4",
+    apiKey: "AIzaSyB0dcc4CHBmEat3Un4lh7lyy8ohPuSJjnw",
   });
 
   const handledetect = async () => {
@@ -84,6 +89,31 @@ export default function Home() {
   const [text, setText] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([]);
 
+
+  const handleSendChat = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    
+    const userMessage = chatInput.trim();
+    setChatInput("");
+    setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setChatLoading(true);
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: userMessage,
+      });
+
+      const assistantMessage = response.text ?? "Sorry, I couldn't generate a response.";
+      setChatMessages(prev => [...prev, { role: "assistant", content: assistantMessage }]);
+    } catch (err) {
+      console.error(err);
+      setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   async function handleRecognition() {
     if (!text.trim()) return;
     setLoading(true);
@@ -109,7 +139,7 @@ export default function Home() {
         if (match) {
           extracted = JSON.parse(match[0]);
         } else if (responseText) {
-          extracted = [responseText]; // fallback
+          extracted = [responseText]; 
         }
       } catch (err) {
         console.error("Failed to parse JSON:", responseText);
@@ -343,36 +373,70 @@ export default function Home() {
           </TabsContent>
         </Tabs>
       </div>
-      <div className="w-full h-full flex items-end justify-end relative z-50">
+      <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={() => setAddChat(true)}
-          className="w-12 h-12 rounded-full bg-black flex items-center justify-center cursor-pointer "
+          className="w-12 h-12 rounded-full bg-black flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors shadow-lg"
         >
           <FiMessageCircle className="text-white" />
         </button>
       </div>
       {addchat && (
-        <div className=" w-full h-full  flex justify-end items-end ">
-          <div className="bg-white w-95 h-120 flex justify-around flex-col items-end border rounded-xl">
-            <div className="w-full h-12 flex justify-between items-center border-b-2 p-2">
-              <div>
-                <p className="font-medium text-base">Chat assistant</p>
-              </div>
+        <div className="fixed bottom-24 right-6 z-50">
+          <div className="bg-white w-80 h-[400px] flex flex-col border border-gray-200 rounded-xl shadow-xl">
+       
+            <div className="w-full h-12 flex justify-between items-center border-b border-gray-200 px-4">
+              <p className="font-medium text-base">Chat assistant</p>
               <button
-                onClick={() => setAddChat(null)}
-                className="w-8 h-8 rounded-xl border flex justify-center items-center cursor-pointer"
+                onClick={() => setAddChat(false)}
+                className="w-8 h-8 rounded-lg border border-gray-200 flex justify-center items-center cursor-pointer hover:bg-gray-100 transition-colors"
               >
-                X
+                ✕
               </button>
             </div>
-            <div className="w-full h-14 flex justify-center items-center gap-3">
-              <input
-                placeholder="Type your message..."
-                className="w-75 h-12 border rounded-xl pl-1"
-              ></input>
-              <button className="w-11 h-11 bg-black rounded-full flex items-center justify-center cursor-pointer">
-                <FiSend className="text-white" />
-              </button>
+            
+
+            <div className="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3">
+              {chatMessages.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center mt-4">Start a conversation...</p>
+              ) : (
+                chatMessages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${
+                      msg.role === "user"
+                        ? "bg-black text-white self-end rounded-br-sm"
+                        : "bg-white border border-gray-200 self-start rounded-bl-sm"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                ))
+              )}
+              {chatLoading && (
+                <div className="bg-white border border-gray-200 self-start rounded-xl rounded-bl-sm px-3 py-2 text-sm text-gray-500">
+                  Thinking...
+                </div>
+              )}
+            </div>
+            
+            <div className="w-full p-3 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
+                  placeholder="Type your message..."
+                  className="flex-1 h-10 border border-gray-200 rounded-xl px-3 text-sm focus:outline-none focus:border-gray-400"
+                />
+                <button 
+                  onClick={handleSendChat}
+                  disabled={chatLoading}
+                  className="w-10 h-10 bg-black rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  <FiSend className="text-white" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

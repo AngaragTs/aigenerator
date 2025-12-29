@@ -15,10 +15,9 @@ export const POST = async (request: NextRequest) => {
     }
 
     const image = await client.textToImage({
-      provider: "nscale",
       model: "stabilityai/stable-diffusion-xl-base-1.0",
       inputs: prompt,
-      parameters: { num_inference_steps: 5 },
+      parameters: { num_inference_steps: 25 },
     });
 
     // Use the generated image (it's a Blob) - convert to base64
