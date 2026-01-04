@@ -20,7 +20,6 @@ export const POST = async (request: NextRequest) => {
       parameters: { num_inference_steps: 25 },
     });
 
-    // Use the generated image (it's a Blob) - convert to base64
     const blob = image as unknown as Blob;
     const arrayBuffer = await blob.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");

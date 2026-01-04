@@ -11,9 +11,7 @@ import { CiAirportSign1, CiImageOn } from "react-icons/ci";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { GoogleGenAI } from "@google/genai";
-import { FiMessageCircle } from "react-icons/fi";
-import { constrainedMemory } from "process";
-import { FiSend } from "react-icons/fi";
+import { FiMessageCircle, FiSend } from "react-icons/fi";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -25,13 +23,15 @@ export default function Home() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [addchat, setAddChat] = useState(false);
 
-
-  const [chatMessages, setChatMessages] = useState<{role: "user" | "assistant", content: string}[]>([]);
+  const [chatMessages, setChatMessages] = useState<
+    { role: "user" | "assistant"; content: string }[]
+  >([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("analysis");
 
   const ai = new GoogleGenAI({
-    apiKey: "AIzaSyB0dcc4CHBmEat3Un4lh7lyy8ohPuSJjnw",
+    apiKey: "AIzaSyDmjky3gntEwJVxAl0U2N5rYbSbHLKBj-Q",
   });
 
   const handledetect = async () => {
@@ -89,13 +89,15 @@ export default function Home() {
   const [text, setText] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([]);
 
-
   const handleSendChat = async () => {
     if (!chatInput.trim() || chatLoading) return;
-    
+
     const userMessage = chatInput.trim();
     setChatInput("");
-    setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setChatMessages((prev) => [
+      ...prev,
+      { role: "user", content: userMessage },
+    ]);
     setChatLoading(true);
 
     try {
@@ -104,11 +106,21 @@ export default function Home() {
         contents: userMessage,
       });
 
-      const assistantMessage = response.text ?? "Sorry, I couldn't generate a response.";
-      setChatMessages(prev => [...prev, { role: "assistant", content: assistantMessage }]);
+      const assistantMessage =
+        response.text ?? "Sorry, I couldn't generate a response.";
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: assistantMessage },
+      ]);
     } catch (err) {
       console.error(err);
-      setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, something went wrong. Please try again.",
+        },
+      ]);
     } finally {
       setChatLoading(false);
     }
@@ -139,7 +151,7 @@ export default function Home() {
         if (match) {
           extracted = JSON.parse(match[0]);
         } else if (responseText) {
-          extracted = [responseText]; 
+          extracted = [responseText];
         }
       } catch (err) {
         console.error("Failed to parse JSON:", responseText);
@@ -157,11 +169,20 @@ export default function Home() {
   return (
     <div className="w-full max-h-screen ">
       <div className="w-full h-15 flex items-center border-b-2 border-[#E4E4E7]">
-        <p className="font-black text-semibold ml-10">AI tools</p>
+        <p
+          className="font-black text-semibold ml-10 cursor-pointer hover:text-gray-600 transition-colors"
+          onClick={() => setActiveTab("analysis")}
+        >
+          AI tools
+        </p>
       </div>
 
       <div className="w-full flex justify-center">
-        <Tabs defaultValue="analysis" className="w-[400px] mt-10">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-[400px] mt-10"
+        >
           <TabsList>
             <TabsTrigger value="analysis">Image analysis</TabsTrigger>
             <TabsTrigger value="recognition">
@@ -384,7 +405,6 @@ export default function Home() {
       {addchat && (
         <div className="fixed bottom-24 right-6 z-50">
           <div className="bg-white w-80 h-[400px] flex flex-col border border-gray-200 rounded-xl shadow-xl">
-       
             <div className="w-full h-12 flex justify-between items-center border-b border-gray-200 px-4">
               <p className="font-medium text-base">Chat assistant</p>
               <button
@@ -394,11 +414,12 @@ export default function Home() {
                 ✕
               </button>
             </div>
-            
 
             <div className="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3">
               {chatMessages.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center mt-4">Start a conversation...</p>
+                <p className="text-gray-500 text-sm text-center mt-4">
+                  Start a conversation...
+                </p>
               ) : (
                 chatMessages.map((msg, idx) => (
                   <div
@@ -419,7 +440,7 @@ export default function Home() {
                 </div>
               )}
             </div>
-            
+
             <div className="w-full p-3 border-t border-gray-200">
               <div className="flex items-center gap-2">
                 <input
@@ -429,7 +450,7 @@ export default function Home() {
                   placeholder="Type your message..."
                   className="flex-1 h-10 border border-gray-200 rounded-xl px-3 text-sm focus:outline-none focus:border-gray-400"
                 />
-                <button 
+                <button
                   onClick={handleSendChat}
                   disabled={chatLoading}
                   className="w-10 h-10 bg-black rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors disabled:opacity-50"
