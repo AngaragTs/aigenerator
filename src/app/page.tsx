@@ -31,7 +31,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("analysis");
 
   const ai = new GoogleGenAI({
-    apiKey: "AIzaSyDmjky3gntEwJVxAl0U2N5rYbSbHLKBj-Q",
+    apiKey: process.env.NEXT_PUBLIC_GOOGLE_GEMINI_API_KEY || "",
   });
 
   const handledetect = async () => {
@@ -359,7 +359,7 @@ export default function Home() {
                 <Textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Жишээ: Astronaut riding a horse"
+                  placeholder="Enter food image description..."
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg"
                   onKeyPress={(e) => e.key === "Enter" && handleGenerate()}
                 />
@@ -408,7 +408,11 @@ export default function Home() {
             <div className="w-full h-12 flex justify-between items-center border-b border-gray-200 px-4">
               <p className="font-medium text-base">Chat assistant</p>
               <button
-                onClick={() => setAddChat(false)}
+                onClick={() => {
+                  setAddChat(false);
+                  setChatMessages([]);
+                  setChatInput("");
+                }}
                 className="w-8 h-8 rounded-lg border border-gray-200 flex justify-center items-center cursor-pointer hover:bg-gray-100 transition-colors"
               >
                 ✕
